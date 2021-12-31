@@ -1,4 +1,6 @@
 # Pong
 
 ## About
-Pong made using Pygame based on the tutorial by Clear Code
+Pong made using Pygame
+
+Followed a tutorial by Clear Code for the most part but I added some improvements afterwards
