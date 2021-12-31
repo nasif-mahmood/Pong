@@ -3,6 +3,7 @@ import sys
 import random
 
 
+
 class Block(pygame.sprite.Sprite):
     def __init__(self, path, x_pos, y_pos):
         super().__init__()
@@ -17,10 +18,10 @@ class Player(Block):
         self.movement = 0
 
     def screen_constrain(self):
-        if self.rect.top <= 0:
-            self.rect.top = 0
-        if self.rect.bottom >= screen_height:
-            self.rect.bottom = screen_height
+        if self.rect.top <= 12.5:
+            self.rect.top = 12.5
+        if self.rect.bottom >= screen_height-12.5:
+            self.rect.bottom = screen_height-12.5
 
     def update(self, ball_group):
         self.rect.y += self.movement
@@ -45,7 +46,7 @@ class Ball(Block):
             self.restart_counter()
 
     def collisions(self):
-        if self.rect.top <= 0 or self.rect.bottom >= screen_height:
+        if self.rect.top <= 12.5 or self.rect.bottom >= screen_height-12.5:
             pygame.mixer.Sound.play(plob_sound)
             self.speed_y *= -1
 
@@ -81,10 +82,11 @@ class Ball(Block):
         if current_time - self.score_time >= 2100:
             self.active = True
 
-        time_counter = basic_font.render(str(countdown_number), True, accent_color)
-        time_counter_rect = time_counter.get_rect(center=(screen_width / 2, screen_height / 2 + 50))
-        pygame.draw.rect(screen, bg_color, time_counter_rect)
-        screen.blit(time_counter, time_counter_rect)
+        if self.active == False:
+            time_counter = timer_font.render(str(countdown_number), True, accent_color)
+            time_counter_rect = time_counter.get_rect(center=(screen_width / 2, screen_height / 2 + 50))
+            pygame.draw.rect(screen, bg_color, time_counter_rect)
+            screen.blit(time_counter, time_counter_rect)
 
 
 class Opponent(Block):
@@ -100,10 +102,10 @@ class Opponent(Block):
         self.constrain()
 
     def constrain(self):
-        if self.rect.top <= 0:
-            self.rect.top = 0
-        if self.rect.bottom >= screen_height:
-            self.rect.bottom = screen_height
+        if self.rect.top <= 12.5:
+            self.rect.top = 12.5
+        if self.rect.bottom >= screen_height-12.5:
+            self.rect.bottom = screen_height-12.5
 
 
 class GameManager:
@@ -133,24 +135,24 @@ class GameManager:
             self.ball_group.sprite.reset_ball()
 
     def draw_score(self):
-        player_score = basic_font.render(str(self.player_score), True, accent_color)
-        opponent_score = basic_font.render(str(self.opponent_score), True, accent_color)
+        player_score = score_font.render(str(self.player_score), True, accent_color)
+        opponent_score = score_font.render(str(self.opponent_score), True, accent_color)
 
-        player_score_rect = player_score.get_rect(midleft=(screen_width / 2 + 40, screen_height / 2))
-        opponent_score_rect = opponent_score.get_rect(midright=(screen_width / 2 - 40, screen_height / 2))
+        player_score_rect = player_score.get_rect(topleft=(screen_width / 2 + 40, 15))
+        opponent_score_rect = opponent_score.get_rect(topright=(screen_width / 2 - 40, 15))
 
         screen.blit(player_score, player_score_rect)
         screen.blit(opponent_score, opponent_score_rect)
 
-
-# def draw_lines():
-#     mid = screen_width / 2
-#     top = 18
-#     bot = 28
-#     for _ in range(27):
-#         pygame.draw.line(screen, light_grey, (mid, top), (mid, bot), 20)
-#         top = bot + 25
-#         bot += 35
+# Middle Line
+def draw_lines():
+    mid = screen_width / 2
+    top = 18
+    bot = 28
+    for _ in range(27):
+        pygame.draw.line(screen, accent_color, (mid, top), (mid, bot), 20)
+        top = bot + 25
+        bot += 35
 
 
 # General Setup
@@ -170,13 +172,14 @@ accent_color = (27, 35, 43)
 
 # Font
 basic_font = pygame.font.Font("freesansbold.ttf", 32)
+title_font = pygame.font.Font("freesansbold.ttf", 64)
+score_font = pygame.font.Font("freesansbold.ttf", 128)
+timer_font = pygame.font.Font("freesansbold.ttf", 192)
 
 # Sounds
 plob_sound = pygame.mixer.Sound("assets/pong.ogg")
 score_sound = pygame.mixer.Sound("assets/score.ogg")
 
-# Middle Line
-middle_strip = pygame.Rect(screen_width / 2 - 2, 0, 4, screen_height)
 
 # Game Objects
 player = Player("assets/Paddle.png", screen_width - 20, screen_height / 2, 5)
@@ -190,6 +193,21 @@ ball_sprite = pygame.sprite.GroupSingle()
 ball_sprite.add(ball)
 
 game_manager = GameManager(ball_sprite, paddle_group)
+
+# Intro Screen
+game_name = title_font.render("Pong", False, accent_color)
+game_name_rectangle = game_name.get_rect(center = (640, 480))
+title_text = basic_font.render("Press Space to start", False, accent_color)
+title_text_rectangle = title_text.get_rect(center = (640, 540))
+
+# Pause Screen
+pause_name = title_font.render("PAUSE", False, accent_color)
+pause_name_rectangle = pause_name.get_rect(center = (640, 480))
+pause_text = basic_font.render("Press Space to resume or ESC to quit", False, accent_color)
+pause_text_rectangle = pause_text.get_rect(center = (640, 540))
+
+game_active = False
+game_pause = False
 
 # Game loop
 while True:
@@ -208,24 +226,39 @@ while True:
                 player.movement -= player.speed
             if event.key == pygame.K_UP:
                 player.movement += player.speed
+        if event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_ESCAPE:
+                if game_active and ball.active:
+                    game_active = False
+                    game_pause = True
+                else:
+                    game_pause = False
 
-    # Visuals
+        if not game_active:
+            if event.type == pygame.KEYDOWN and event.key == pygame.K_SPACE:
+                if not game_pause:
+                    game_manager.player_score = 0
+                    game_manager.opponent_score = 0
+                    ball.reset_ball()
+                game_active = True
+    
+
     screen.fill(bg_color)
-    pygame.draw.rect(screen, accent_color, middle_strip)
-    # pygame.draw.rect(screen, light_grey, player)
-    # pygame.draw.rect(screen, light_grey, opponent)
-    # pygame.draw.ellipse(screen, light_grey, ball)
-    pygame.draw.line(screen, accent_color, (0, 0), (screen_width, 0), 25)
-    pygame.draw.line(screen, accent_color, (0, screen_height), (screen_width, screen_height), 25)
-    # draw_lines()
+    if game_active:
+        # Visuals
+        pygame.draw.line(screen, accent_color, (0, 0), (screen_width, 0), 25)
+        pygame.draw.line(screen, accent_color, (0, screen_height), (screen_width, screen_height), 25)
+        draw_lines()
 
-    # Run the game
-    game_manager.run_game()
+        # Run the game
+        game_manager.run_game()
+    elif game_pause:
+        screen.blit(pause_name, pause_name_rectangle)
+        screen.blit(pause_text, pause_text_rectangle)
+    else:
+        screen.blit(game_name, game_name_rectangle)
+        screen.blit(title_text, title_text_rectangle)
 
-    # player_text = game_font.render(f"{player_score}", False, light_grey)
-    # screen.blit(player_text, (660, 470))
-    # opponent_text = game_font.render(f"{opponent_score}", False, light_grey)
-    # screen.blit(opponent_text, (600, 470))
 
     # Updating the window
     pygame.display.flip()
